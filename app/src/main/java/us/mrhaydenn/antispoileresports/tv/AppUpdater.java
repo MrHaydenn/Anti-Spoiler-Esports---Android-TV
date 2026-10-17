@@ -44,11 +44,12 @@ public final class AppUpdater {
         LinearLayout layout=new LinearLayout(activity);layout.setOrientation(LinearLayout.VERTICAL);layout.setPadding(32,16,32,8);
         TextView version=new TextView(activity);version.setText("Installed: "+BuildConfig.VERSION_NAME+" ("+BuildConfig.VERSION_CODE+")\nRelease receives only published GitHub Releases. Experimental receives successful push builds.");version.setTextSize(16);layout.addView(version);
         RadioGroup group=new RadioGroup(activity);
-        RadioButton release=new RadioButton(activity);release.setId(1001);release.setText("Release (default)");group.addView(release);
-        RadioButton experimental=new RadioButton(activity);experimental.setId(1002);experimental.setText("Experimental — latest push build");group.addView(experimental);
-        group.check(channel().equals("release")?1001:1002);layout.addView(group);
+        final int releaseId=android.view.View.generateViewId(),experimentalId=android.view.View.generateViewId();
+        RadioButton release=new RadioButton(activity);release.setId(releaseId);release.setText("Release (default)");group.addView(release);
+        RadioButton experimental=new RadioButton(activity);experimental.setId(experimentalId);experimental.setText("Experimental — latest push build");group.addView(experimental);
+        group.check(channel().equals("release")?releaseId:experimentalId);layout.addView(group);
         CheckBox automatic=new CheckBox(activity);automatic.setText("Automatically check for updates");automatic.setChecked(prefs.getBoolean("automatic",true));layout.addView(automatic);
-        group.setOnCheckedChangeListener((g,id)->{prefs.edit().putString("channel",id==1002?"experimental":"release").apply();pendingInstall=null;});
+        group.setOnCheckedChangeListener((g,id)->{prefs.edit().putString("channel",id==experimentalId?"experimental":"release").apply();pendingInstall=null;});
         automatic.setOnCheckedChangeListener((button,checked)->prefs.edit().putBoolean("automatic",checked).apply());
         AlertDialog dialog=new AlertDialog.Builder(activity).setTitle("App updates").setView(layout)
             .setPositiveButton("Check now",(d,w)->check(true)).setNegativeButton("Close",(d,w)->{}).setNeutralButton("Install downloaded",(d,w)->new android.os.Handler(android.os.Looper.getMainLooper()).post(()->{permissionRequested=false;installPending();})).create();

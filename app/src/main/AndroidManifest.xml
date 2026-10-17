@@ -6,7 +6,7 @@
     <application android:label="@string/app_name" android:icon="@drawable/ic_launcher"
         android:banner="@drawable/tv_banner" android:theme="@style/AppTheme"
         android:usesCleartextTraffic="${allowCleartext}" android:allowBackup="false"
-        android:supportsRtl="true" android:hardwareAccelerated="true">
+        android:enableOnBackInvokedCallback="true" android:supportsRtl="true" android:hardwareAccelerated="true">
         <provider android:name=".UpdateFileProvider" android:authorities="${applicationId}.updates" android:exported="false" android:grantUriPermissions="true" />
         <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="landscape"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|smallestScreenSize|uiMode">

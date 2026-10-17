@@ -29,6 +29,7 @@ import org.json.JSONObject;
 
 public class MainActivity extends Activity {
     private WebView web;
+    private Object systemBack;
     private AppUpdater updater;
     private final android.os.Handler updateHandler=new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable updateTick=new Runnable(){public void run(){if(updater!=null)updater.onResume();updateHandler.postDelayed(this,15*60000L);}};
@@ -40,6 +41,11 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle savedState) {
         super.onCreate(savedState);
+        if(android.os.Build.VERSION.SDK_INT>=33){
+            android.window.OnBackInvokedCallback callback=()->{if(backHeld){backHeld=false;return;}if(!nativeDialog)handleBackNavigation();};
+            systemBack=callback;
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,callback);
+        }
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
         serverUrl = getPreferences(MODE_PRIVATE).getString("server_url", BuildConfig.DEFAULT_SERVER_URL);
@@ -161,6 +167,14 @@ public class MainActivity extends Activity {
             default:return null;
         }
     }
+    private void handleBackNavigation(){
+        if(web==null){exitPrompt();return;}
+        if(status!=null&&status.getVisibility()==View.VISIBLE){exitPrompt();return;}
+        web.evaluateJavascript("!!(window.ASE_TV && window.ASE_TV.handleKey('Back'))",result->{if(!"true".equals(result))exitPrompt();});
+    }
+    // Physical TV remote Back/long-press still use KeyEvents. Gesture/system Back
+    // is handled separately by OnBackInvokedCallback on Android 13 and newer.
+    @android.annotation.SuppressLint("GestureBackNavigation")
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
         int code=event.getKeyCode();
         if(code==KeyEvent.KEYCODE_BACK && event.getAction()==KeyEvent.ACTION_UP && backHeld){backHeld=false;return true;}
@@ -169,8 +183,7 @@ public class MainActivity extends Activity {
         if(code==KeyEvent.KEYCODE_BACK){
             if(event.getAction()==KeyEvent.ACTION_DOWN && event.getRepeatCount()==1){backHeld=true;connectionSettings();return true;}
             if(event.getAction()==KeyEvent.ACTION_UP && !event.isCanceled()){
-                if(status.getVisibility()==View.VISIBLE){exitPrompt();return true;}
-                web.evaluateJavascript("!!(window.ASE_TV && window.ASE_TV.handleKey('Back'))",result->{if(!"true".equals(result))exitPrompt();});
+                handleBackNavigation();
             }
             return true;
         }
@@ -186,5 +199,5 @@ public class MainActivity extends Activity {
     }
     @Override protected void onPause(){updateHandler.removeCallbacks(updateTick);if(web!=null){web.evaluateJavascript("window.ASE_TV && window.ASE_TV.setActive(false)",null);web.onPause();}super.onPause();}
     @Override protected void onResume(){super.onResume();updateHandler.removeCallbacks(updateTick);updateHandler.postDelayed(updateTick,1500);if(updater!=null)updater.onResume();if(web!=null){web.onResume();web.evaluateJavascript("window.ASE_TV && window.ASE_TV.setActive(true)",null);}}
-    @Override protected void onDestroy(){updateHandler.removeCallbacks(updateTick);if(updater!=null)updater.close();if(web!=null){web.stopLoading();root.removeView(web);web.destroy();}super.onDestroy();}
+    @Override protected void onDestroy(){if(android.os.Build.VERSION.SDK_INT>=33&&systemBack!=null)getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback((android.window.OnBackInvokedCallback)systemBack);updateHandler.removeCallbacks(updateTick);if(updater!=null)updater.close();if(web!=null){web.stopLoading();root.removeView(web);web.destroy();}super.onDestroy();}
 }

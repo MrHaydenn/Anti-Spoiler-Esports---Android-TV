@@ -50,6 +50,13 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug -PciVersionCode=${{ steps.metadata.outputs.version_code }} -PciVersionName=${{ steps.metadata.outputs.version_name }}
+      - name: Upload lint and test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-reports-${{ steps.metadata.outputs.version_code }}
+          path: app/build/reports/
+          retention-days: 7
       - name: Development build for testing (not the update feed)
         uses: actions/upload-artifact@v4
         with:

@@ -1,0 +1,131 @@
+name: Android TV build
+on:
+  push:
+    branches-ignore: [updates]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Build feed/candidate; this never publishes a GitHub Release
+        required: true
+        type: choice
+        default: experimental
+        options: [experimental, release]
+      version:
+        description: Version base, for example 0.1.0
+        required: true
+        default: 0.1.0
+permissions:
+  contents: read
+concurrency:
+  group: android-tv-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      channel: ${{ steps.metadata.outputs.channel }}
+      version_code: ${{ steps.metadata.outputs.version_code }}
+      version_name: ${{ steps.metadata.outputs.version_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install build SDK components
+        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - name: Test build and channel rules
+        run: python -m unittest discover -s scripts -p "test_*.py"
+      - name: Build metadata
+        id: metadata
+        env:
+          INPUT_CHANNEL: ${{ inputs.channel || 'experimental' }}
+          INPUT_VERSION: ${{ inputs.version || '0.1.0' }}
+        run: python scripts/build-metadata.py >> "$GITHUB_OUTPUT"
+      - name: Test update policy and build development APK
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug -PciVersionCode=${{ steps.metadata.outputs.version_code }} -PciVersionName=${{ steps.metadata.outputs.version_name }}
+      - name: Development build for testing (not the update feed)
+        uses: actions/upload-artifact@v4
+        with:
+          name: development-debug-${{ steps.metadata.outputs.version_code }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
+  package:
+    if: github.event_name != 'pull_request'
+    needs: check
+    runs-on: ubuntu-latest
+    outputs:
+      signed: ${{ steps.signing.outputs.configured }}
+    env:
+      TV_KEYSTORE_PATH: ${{ runner.temp }}/android-signing.p12
+      TV_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_SIGNING_PASSWORD }}
+      TV_KEY_ALIAS: ${{ secrets.ANDROID_SIGNING_ALIAS }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check signing configuration
+        id: signing
+        env:
+          KEY_B64: ${{ secrets.ANDROID_SIGNING_KEY_B64 }}
+        run: |
+          if [[ -z "$KEY_B64" || -z "$TV_KEYSTORE_PASSWORD" || -z "$TV_KEY_ALIAS" ]]; then
+            echo 'configured=false' >> "$GITHUB_OUTPUT"
+            echo 'Signing is not configured. Source checks run, but no installable update feed is published.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          python - <<'PY'
+          import os,base64,pathlib
+          pathlib.Path(os.environ['TV_KEYSTORE_PATH']).write_bytes(base64.b64decode(os.environ['KEY_B64'],validate=True))
+          PY
+          chmod 600 "$TV_KEYSTORE_PATH"
+          echo 'configured=true' >> "$GITHUB_OUTPUT"
+      - if: steps.signing.outputs.configured == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - if: steps.signing.outputs.configured == 'true'
+        uses: gradle/actions/setup-gradle@v4
+      - if: steps.signing.outputs.configured == 'true'
+        name: Install build SDK components
+        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - if: steps.signing.outputs.configured == 'true'
+        name: Build signed APK
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease -PciVersionCode=${{ needs.check.outputs.version_code }} -PciVersionName=${{ needs.check.outputs.version_name }}
+      - if: steps.signing.outputs.configured == 'true'
+        name: Prepare verified update package
+        env:
+          CHANNEL: ${{ needs.check.outputs.channel }}
+          VERSION_CODE: ${{ needs.check.outputs.version_code }}
+          VERSION_NAME: ${{ needs.check.outputs.version_name }}
+        run: python scripts/prepare-update.py
+      - if: steps.signing.outputs.configured == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-tv-${{ needs.check.outputs.channel }}-${{ needs.check.outputs.version_code }}
+          path: dist/*
+          retention-days: 30
+      - name: Remove signing material from runner
+        if: always()
+        run: python -c "import os,pathlib; pathlib.Path(os.environ['TV_KEYSTORE_PATH']).unlink(missing_ok=True)"
+  experimental:
+    needs: [check, package]
+    if: needs.package.outputs.signed == 'true' && needs.check.outputs.channel == 'experimental'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-tv-experimental-${{ needs.check.outputs.version_code }}
+          path: dist
+      - name: Publish Experimental feed only (never a GitHub Release)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/publish-experimental.py

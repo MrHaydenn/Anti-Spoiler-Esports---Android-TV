@@ -61,7 +61,6 @@ jobs:
     outputs:
       signed: ${{ steps.signing.outputs.configured }}
     env:
-      TV_KEYSTORE_PATH: ${{ runner.temp }}/android-signing.p12
       TV_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_SIGNING_PASSWORD }}
       TV_KEY_ALIAS: ${{ secrets.ANDROID_SIGNING_ALIAS }}
     steps:
@@ -70,7 +69,9 @@ jobs:
         id: signing
         env:
           KEY_B64: ${{ secrets.ANDROID_SIGNING_KEY_B64 }}
+          TV_KEYSTORE_PATH: ${{ runner.temp }}/android-signing.p12
         run: |
+          echo "TV_KEYSTORE_PATH=$TV_KEYSTORE_PATH" >> "$GITHUB_ENV"
           if [[ -z "$KEY_B64" || -z "$TV_KEYSTORE_PASSWORD" || -z "$TV_KEY_ALIAS" ]]; then
             echo 'configured=false' >> "$GITHUB_OUTPUT"
             echo 'Signing is not configured. Source checks run, but no installable update feed is published.' >> "$GITHUB_STEP_SUMMARY"

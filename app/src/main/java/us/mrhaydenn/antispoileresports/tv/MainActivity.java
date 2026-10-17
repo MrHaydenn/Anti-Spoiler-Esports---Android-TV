@@ -70,13 +70,19 @@ public class MainActivity extends Activity {
         settings.setAllowContentAccess(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setSupportMultipleWindows(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " AntiSpoilerEsportsTV/0.1");
+        settings.setUserAgentString(settings.getUserAgentString() + " AntiSpoilerEsportsTV/0.2");
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
         web.setWebChromeClient(new WebChromeClient());
         web.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 if (!request.isForMainFrame()) return false;
-                if (sameOrigin(request.getUrl(), Uri.parse(serverUrl))) return false;
+                if (sameOrigin(request.getUrl(), Uri.parse(serverUrl))) {
+                    String path=request.getUrl().getPath();
+                    if("/tv/native/updates".equals(path)){updater.showSettings();return true;}
+                    if("/tv/native/connection".equals(path)){connectionSettings();return true;}
+                    if("/tv/native/settings".equals(path)){appSettings();return true;}
+                    return false;
+                }
                 Toast.makeText(MainActivity.this, "Use the in-app player. Hold Back to change server settings.", Toast.LENGTH_LONG).show();
                 return true;
             }
@@ -123,6 +129,12 @@ public class MainActivity extends Activity {
     private void showError(String message) { failed=true; statusText.setText(message); status.setVisibility(View.VISIBLE); status.getChildAt(2).requestFocus(); }
     private void loadSite() { if(web != null) { failed=false; status.setVisibility(View.VISIBLE); web.loadUrl(serverUrl + "/tv"); } }
 
+    private void appSettings(){
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Settings")
+            .setItems(new String[]{"App updates","Server connection"},(d,which)->updateHandler.post(()->{if(which==0)updater.showSettings();else connectionSettings();}))
+            .setNegativeButton("Close",(d,w)->{}).create();
+        showManagedDialog(dialog);
+    }
     private void connectionSettings() {
         EditText address = new EditText(this); address.setSingleLine(true); address.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI); address.setText(serverUrl); address.selectAll();
         String help = "Public HTTPS server address. Hold Back while browsing to reopen these settings." + (BuildConfig.DEBUG ? " Debug builds also allow http://YOUR-SERVER-IP:10117 for LAN testing." : "");
@@ -179,9 +191,9 @@ public class MainActivity extends Activity {
         int code=event.getKeyCode();
         if(code==KeyEvent.KEYCODE_BACK && event.getAction()==KeyEvent.ACTION_UP && backHeld){backHeld=false;return true;}
         if(web==null || nativeDialog) return super.dispatchKeyEvent(event);
-        if(code==KeyEvent.KEYCODE_MENU){if(event.getAction()==KeyEvent.ACTION_UP)connectionSettings();return true;}
+        if(code==KeyEvent.KEYCODE_MENU){if(event.getAction()==KeyEvent.ACTION_UP)appSettings();return true;}
         if(code==KeyEvent.KEYCODE_BACK){
-            if(event.getAction()==KeyEvent.ACTION_DOWN && event.getRepeatCount()==1){backHeld=true;connectionSettings();return true;}
+            if(event.getAction()==KeyEvent.ACTION_DOWN && event.getRepeatCount()==1){backHeld=true;appSettings();return true;}
             if(event.getAction()==KeyEvent.ACTION_UP && !event.isCanceled()){
                 handleBackNavigation();
             }
@@ -191,7 +203,8 @@ public class MainActivity extends Activity {
         if(key==null || status.getVisibility()==View.VISIBLE || !web.hasFocus())return super.dispatchKeyEvent(event);
         if(event.getAction()==KeyEvent.ACTION_DOWN){
             final KeyEvent original=new KeyEvent(event);
-            web.evaluateJavascript("!!(window.ASE_TV && window.ASE_TV.handleKey("+JSONObject.quote(key)+"))",result->{
+            String meta="{repeat:"+(event.getRepeatCount()>0)+",heldMs:"+Math.max(0,event.getEventTime()-event.getDownTime())+"}";
+            web.evaluateJavascript("!!(window.ASE_TV && window.ASE_TV.handleKey("+JSONObject.quote(key)+","+meta+"))",result->{
                 if(!"true".equals(result)){web.dispatchKeyEvent(original);web.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP,code));}
             });
         }

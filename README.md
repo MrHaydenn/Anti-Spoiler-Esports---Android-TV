@@ -2,11 +2,13 @@
 
 Google TV Streamer / Android TV client for [Anti-Spoiler Esports](https://antispoileresports.mrhaydenn.us). This repository contains **only the TV client**, its tests, build tools and documentation. The Node server, PandaScore/YouTube credentials, cache and website source are separate and are intentionally not included.
 
+[Download the latest signed Experimental APK](https://raw.githubusercontent.com/MrHaydenn/Anti-Spoiler-Esports---Android-TV/updates/experimental/anti-spoiler-esports-tv.apk). The installed app still defaults to Release updates.
+
 ## Use the app
 
-The app opens the server's remote-friendly `/tv` interface with the existing spoiler-safe brackets and player. Use the D-pad and Select; Back closes dialogs/player, then returns to tournaments. Hold Back (or press Menu) for connection settings. Choose **App updates** there to change channels or check immediately. App updates are also available on the native connection-error screen.
+The app opens the server's remote-friendly `/tv` interface with the existing spoiler-safe brackets and player. Use the D-pad and Select; Back closes dialogs/player, then returns to tournaments. Use the **Settings** gear at the top right, then **App updates** to change channels or check immediately. Hold Back (or press Menu) also opens native settings. App updates are also available on the native connection-error screen.
 
-The default server is `https://antispoileresports.mrhaydenn.us`. Its SSL certificate must be active. The server must support `/tv`, `/api/health`, and the site's assets/API routes. Debug builds can use a manually entered LAN HTTP address; official update builds use HTTPS. A functioning Android System WebView is required. Real Google TV Streamer playback/installer behavior still needs hardware testing.
+The default server is `https://antispoileresports.mrhaydenn.us`. Its SSL certificate must be active. The server must support `/tv`, `/api/health`, and the site's assets/API routes. Debug builds can use a manually entered LAN HTTP address; official update builds use HTTPS. A functioning Android System WebView is required. Tournament cards are single remote-focus targets; favorites are toggled on Overview and appear first on the home screen. Playback fills the TV, with a fading overlay containing Back, rewind, play/pause and forward. Hold OK on the 10-second seek buttons to accelerate; press a direction or OK to bring the toolbar back. Real Google TV Streamer playback/installer behavior still needs hardware testing.
 
 Favorites, reveal state and progress are saved on this TV per server origin. They are not synchronized with desktop browsers yet. All devices use the existing shared backend API cache. No API credentials are embedded in the APK.
 

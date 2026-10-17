@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "packageName": "us.mrhaydenn.antispoileresports.tv",
   "channel": "experimental",
-  "versionCode": 100071,
-  "versionName": "0.1.0-experimental.7.1",
+  "versionCode": 100081,
+  "versionName": "0.1.0-experimental.8.1",
   "minSdk": 26,
   "apkUrl": "https://raw.githubusercontent.com/MrHaydenn/Anti-Spoiler-Esports---Android-TV/updates/experimental/anti-spoiler-esports-tv.apk",
-  "sha256": "9fe07d9995897358804375cb40b20403eecc661a9c818d6203e69e3d91d941de",
-  "commit": "4f262921462b9b0f57104a6b4674ead5a69c986d",
+  "sha256": "b874f794abed5287f5a6e2b43a2d040bb116efe1623d1a4a3f6a45c3c452cf64",
+  "commit": "500b8102c4b53baed12ca74ac8bae37d09de8b60",
   "sourceBranch": "main"
 }

@@ -51,7 +51,7 @@ public final class AppUpdater {
         group.setOnCheckedChangeListener((g,id)->{prefs.edit().putString("channel",id==1002?"experimental":"release").apply();pendingInstall=null;});
         automatic.setOnCheckedChangeListener((button,checked)->prefs.edit().putBoolean("automatic",checked).apply());
         AlertDialog dialog=new AlertDialog.Builder(activity).setTitle("App updates").setView(layout)
-            .setPositiveButton("Check now",(d,w)->check(true)).setNegativeButton("Close",(d,w)->{}).setNeutralButton("Install downloaded",(d,w)->{permissionRequested=false;installPending();}).create();
+            .setPositiveButton("Check now",(d,w)->check(true)).setNegativeButton("Close",(d,w)->{}).setNeutralButton("Install downloaded",(d,w)->new android.os.Handler(android.os.Looper.getMainLooper()).post(()->{permissionRequested=false;installPending();})).create();
         activity.showManagedDialog(dialog);dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setEnabled(pendingInstall!=null);
     }
 

@@ -34,8 +34,10 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Install build SDK components
-        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - name: Verify hosted Android SDK
+        run: |
+          test -f "$ANDROID_HOME/platforms/android-36/android.jar"
+          test -x "$ANDROID_HOME/build-tools/35.0.0/aapt2"
       - name: Test build and channel rules
         run: python -m unittest discover -s scripts -p "test_*.py"
       - name: Build metadata
@@ -91,8 +93,10 @@ jobs:
       - if: steps.signing.outputs.configured == 'true'
         uses: gradle/actions/setup-gradle@v4
       - if: steps.signing.outputs.configured == 'true'
-        name: Install build SDK components
-        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+        name: Verify hosted Android SDK
+        run: |
+          test -f "$ANDROID_HOME/platforms/android-36/android.jar"
+          test -x "$ANDROID_HOME/build-tools/35.0.0/aapt2"
       - if: steps.signing.outputs.configured == 'true'
         name: Build signed APK
         run: |

@@ -70,7 +70,7 @@ public class MainActivity extends Activity {
         settings.setAllowContentAccess(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setSupportMultipleWindows(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " AntiSpoilerEsportsTV/0.2");
+        settings.setUserAgentString(settings.getUserAgentString() + " AntiSpoilerEsportsTV/" + BuildConfig.VERSION_NAME);
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
         web.setWebChromeClient(new WebChromeClient());
         web.setWebViewClient(new WebViewClient() {
@@ -127,7 +127,7 @@ public class MainActivity extends Activity {
         root.addView(status, new FrameLayout.LayoutParams(-1,-1));
     }
     private void showError(String message) { failed=true; statusText.setText(message); status.setVisibility(View.VISIBLE); status.getChildAt(2).requestFocus(); }
-    private void loadSite() { if(web != null) { failed=false; status.setVisibility(View.VISIBLE); web.loadUrl(serverUrl + "/tv"); } }
+    private void loadSite() { if(web != null) { failed=false; status.setVisibility(View.VISIBLE); web.loadUrl(serverUrl + "/tv?appVersion=" + Uri.encode(BuildConfig.VERSION_NAME)); } }
 
     private void appSettings(){
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Settings")
